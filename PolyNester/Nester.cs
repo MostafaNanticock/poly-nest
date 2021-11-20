@@ -39,19 +39,9 @@ namespace PolyNester
             this.X = X; this.Y = Y;
         }
 
-        public Vector64(Vector64 pt)
-        {
-            this.X = pt.X; this.Y = pt.Y;
-        }
-
         public static Vector64 operator +(Vector64 a, Vector64 b)
         {
             return new Vector64(a.X + b.X, a.Y + b.Y);
-        }
-
-        public static Vector64 operator -(Vector64 a, Vector64 b)
-        {
-            return new Vector64(a.X - b.X, a.Y - b.Y);
         }
 
         public static Vector64 operator *(Vector64 a, Vector64 b)
@@ -59,45 +49,9 @@ namespace PolyNester
             return new Vector64(a.X * b.X, a.Y * b.Y);
         }
 
-        public static Vector64 operator /(Vector64 a, Vector64 b)
-        {
-            return new Vector64(a.X / b.X, a.Y / b.Y);
-        }
-
-        public static Vector64 operator *(Vector64 a, double b)
-        {
-            return new Vector64(a.X * b, a.Y * b);
-        }
-
         public static Vector64 operator *(double b, Vector64 a)
         {
             return new Vector64(a.X * b, a.Y * b);
-        }
-
-        public static bool operator ==(Vector64 a, Vector64 b)
-        {
-            return a.X == b.X && a.Y == b.Y;
-        }
-
-        public static bool operator !=(Vector64 a, Vector64 b)
-        {
-            return a.X != b.X || a.Y != b.Y;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (obj == null) return false;
-            if (obj is Vector64)
-            {
-                Vector64 a = (Vector64)obj;
-                return (X == a.X) && (Y == a.Y);
-            }
-            else return false;
-        }
-
-        public override int GetHashCode()
-        {
-            return (X.GetHashCode() ^ Y.GetHashCode());
         }
     }
 
@@ -124,16 +78,6 @@ namespace PolyNester
         public double Height()
         {
             return Math.Abs(top - bottom);
-        }
-
-        public double Area()
-        {
-            return Width() * Height();
-        }
-
-        public double Aspect()
-        {
-            return Width() / Height();
         }
     }
 
@@ -261,14 +205,6 @@ namespace PolyNester
         }
     }
 
-    public static class ConverterUtility
-    {
-        public static IntPoint ToIntPoint(this Vector64 vec) { return new IntPoint(vec.X, vec.Y); }
-        public static Vector64 ToVector64(this IntPoint vec) { return new Vector64(vec.X, vec.Y); }
-        public static IntRect ToIntRect(this Rect64 rec) { return new IntRect((long)rec.left, (long)rec.top, (long)rec.right, (long)rec.bottom); }
-        public static Rect64 ToRect64(this IntRect rec) { return new Rect64(rec.left, rec.top, rec.right, rec.bottom); }
-    }
-
     public static class GeomUtility
     {
         private class PolarComparer : IComparer
@@ -347,27 +283,11 @@ namespace PolyNester
             return clone;
         }
 
-        public static NPolygonsList Clone(this NPolygonsList polys)
-        {
-            NPolygonsList clone = new NPolygonsList(polys.Count);
-            for (int i = 0; i < polys.Count; i++)
-                clone.Add(polys[i].Clone());
-            return clone;
-        }
-
         public static NPolygonsList Clone(this NPolygonsList polys, long shift_x, long shift_y, bool flip_first = false)
         {
             NPolygonsList clone = new NPolygonsList(polys.Count);
             for (int i = 0; i < polys.Count; i++)
                 clone.Add(polys[i].Clone(shift_x, shift_y, flip_first));
-            return clone;
-        }
-
-        public static NPolygonsList Clone(this NPolygonsList polys, Mat3x3 T)
-        {
-            NPolygonsList clone = new NPolygonsList(polys.Count);
-            for (int i = 0; i < polys.Count; i++)
-                clone.Add(polys[i].Clone(T));
             return clone;
         }
 
@@ -879,11 +799,6 @@ namespace PolyNester
             return unique;
         }
 
-        public void CMD_Scale(int handle, double scale_x, double scale_y)
-        {
-            command_buffer.Enqueue(new Command() { Call = cmd_scale, param = new object[] { handle, scale_x, scale_y } });
-        }
-
         /// <to be Ported>
         private void cmd_scale(params object[] param)
         {
@@ -891,11 +806,6 @@ namespace PolyNester
             double scale_x = (double)param[1];
             double scale_y = (double)param[2];
             polygon_lib[handle].trans = Mat3x3.Scale(scale_x, scale_y) * polygon_lib[handle].trans;
-        }
-
-        public void CMD_Rotate(int handle, double theta)
-        {
-            command_buffer.Enqueue(new Command() { Call = cmd_rotate, param = new object[] { handle, theta } });
         }
 
         /// <to be Ported>
@@ -906,11 +816,6 @@ namespace PolyNester
             polygon_lib[handle].trans = Mat3x3.RotateCounterClockwise(theta) * polygon_lib[handle].trans;
         }
 
-        public void CMD_Translate(int handle, double translate_x, double translate_y)
-        {
-            command_buffer.Enqueue(new Command() { Call = cmd_translate, param = new object[] { handle, translate_x, translate_y } });
-        }
-
         /// <to be Ported>
         private void cmd_translate(params object[] param)
         {
@@ -918,11 +823,6 @@ namespace PolyNester
             double translate_x = (double)param[1];
             double translate_y = (double)param[2];
             polygon_lib[handle].trans = Mat3x3.Translate(translate_x, translate_y) * polygon_lib[handle].trans;
-        }
-
-        public void CMD_TranslateOriginToZero(IEnumerable<int> handles)
-        {
-            command_buffer.Enqueue(new Command() { Call = cmd_translate_origin_to_zero, param = new object[] { handles } });
         }
 
         /// <to be Ported>
@@ -1020,18 +920,6 @@ namespace PolyNester
             NFPQUALITY quality = GetNFPQuality(subj_handle, pattern_handle, max_area_bounds);
             quality = (NFPQUALITY)Math.Min((int)quality, (int)max_quality);
             return AddMinkowskiSum(subj_handle, pattern_handle, quality, true, lib_set_at);
-        }
-
-        /// <summary>
-        /// Regular for loop in the syntax of a parallel for used for debugging
-        /// </summary>
-        /// <param name="i"></param>
-        /// <param name="j"></param>
-        /// <param name="body"></param>
-        private void For(int i, int j, Action<int> body)
-        {
-            for (int k = i; k < j; k++)
-                body(k);
         }
 
         /// <to be Ported>
@@ -1362,12 +1250,6 @@ namespace PolyNester
             return polygon_lib.Count - 1;
         }
 
-        public int AddCanvasFitPolygon(Rect64 canvas, int pattern_handle)
-        {
-            IntRect c = new IntRect((long)canvas.left, (long)canvas.top, (long)canvas.right, (long)canvas.bottom);
-            return AddCanvasFitPolygon(c, pattern_handle);
-        }
-
         /// <to be Ported>
         public int[] AddCanvasFitPolygon(IEnumerable<int> handles)
         {
@@ -1402,18 +1284,6 @@ namespace PolyNester
         {
             for (int i = 0; i < polygon_lib.Count; i++)
                 polygon_lib[i].trans = Mat3x3.Eye();
-        }
-
-        public void ApplyTransformLibUVSpace(Vector64[] points, int[] handles)
-        {
-            for (int i = 0; i < points.Length; i++)
-                points[i] = polygon_lib[handles[i]].trans * (unit_scale * points[i]);
-        }
-
-        public void RevertTransformLibUVSpace(Vector64[] points, int[] handles)
-        {
-            for (int i = 0; i < points.Length; i++)
-                points[i] = (1.0 / unit_scale) * (polygon_lib[handles[i]].trans.Inverse() * points[i]);
         }
     }
 }
