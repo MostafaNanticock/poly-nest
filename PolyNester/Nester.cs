@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * 
+ * Only parts marked with "/// <to be Ported>" marker will be ported to cpp
+ * 
+ */
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,10 +14,21 @@ using ClipperLib;
 
 namespace PolyNester
 {
-    using Ngon = List<IntPoint>;
-    using Ngons = List<List<IntPoint>>;
+    /// <summary>Simply a list of points</summary>
+    using NPolygon = List<IntPoint>;
+    /// <summary>A simple list of Ngons</summary>
+    using NPolygonsList = List<List<IntPoint>>;
 
-    public enum NFPQUALITY { Simple, Convex, ConcaveLight, ConcaveMedium, ConcaveHigh, ConcaveFull, Full }
+    public enum NFPQUALITY 
+    {
+        Simple,
+        Convex,
+        ConcaveLight,
+        ConcaveMedium,
+        ConcaveHigh,
+        ConcaveFull,
+        Full
+    }
 
     public struct Vector64
     {
@@ -82,7 +99,6 @@ namespace PolyNester
         {
             return (X.GetHashCode() ^ Y.GetHashCode());
         }
-
     }
 
     public struct Rect64
@@ -308,48 +324,48 @@ namespace PolyNester
             return ((double)rect.Width()) / rect.Height();
         }
 
-        public static Ngon Clone(this Ngon poly)
+        public static NPolygon Clone(this NPolygon poly)
         {
-            return new Ngon(poly);
+            return new NPolygon(poly);
         }
 
-        public static Ngon Clone(this Ngon poly, long shift_x, long shift_y, bool flip_first = false)
+        public static NPolygon Clone(this NPolygon poly, long shift_x, long shift_y, bool flip_first = false)
         {
             long scale = flip_first ? -1 : 1;
 
-            Ngon clone = new Ngon(poly.Count);
+            NPolygon clone = new NPolygon(poly.Count);
             for (int i = 0; i < poly.Count; i++)
                 clone.Add(new IntPoint(scale * poly[i].X + shift_x, scale * poly[i].Y + shift_y));
             return clone;
         }
 
-        public static Ngon Clone(this Ngon poly, Mat3x3 T)
+        public static NPolygon Clone(this NPolygon poly, Mat3x3 T)
         {
-            Ngon clone = new Ngon(poly.Count);
+            NPolygon clone = new NPolygon(poly.Count);
             for (int i = 0; i < poly.Count; i++)
                 clone.Add(T * poly[i]);
             return clone;
         }
 
-        public static Ngons Clone(this Ngons polys)
+        public static NPolygonsList Clone(this NPolygonsList polys)
         {
-            Ngons clone = new Ngons(polys.Count);
+            NPolygonsList clone = new NPolygonsList(polys.Count);
             for (int i = 0; i < polys.Count; i++)
                 clone.Add(polys[i].Clone());
             return clone;
         }
 
-        public static Ngons Clone(this Ngons polys, long shift_x, long shift_y, bool flip_first = false)
+        public static NPolygonsList Clone(this NPolygonsList polys, long shift_x, long shift_y, bool flip_first = false)
         {
-            Ngons clone = new Ngons(polys.Count);
+            NPolygonsList clone = new NPolygonsList(polys.Count);
             for (int i = 0; i < polys.Count; i++)
                 clone.Add(polys[i].Clone(shift_x, shift_y, flip_first));
             return clone;
         }
 
-        public static Ngons Clone(this Ngons polys, Mat3x3 T)
+        public static NPolygonsList Clone(this NPolygonsList polys, Mat3x3 T)
         {
-            Ngons clone = new Ngons(polys.Count);
+            NPolygonsList clone = new NPolygonsList(polys.Count);
             for (int i = 0; i < polys.Count; i++)
                 clone.Add(polys[i].Clone(T));
             return clone;
@@ -391,6 +407,7 @@ namespace PolyNester
             return new Rect64(width_min, height_max, width_max, height_min);
         }
 
+        /// <to be Ported>
         public static void GetRefitTransform(IEnumerable<Vector64> points, Rect64 target, bool stretch, out Vector64 scale, out Vector64 shift)
         {
             Rect64 bds = GetBounds(points);
@@ -407,20 +424,21 @@ namespace PolyNester
                 + new Vector64(Math.Min(target.left, target.right), Math.Min(target.bottom, target.top));
         }
 
-        public static Ngon ConvexHull(Ngon subject, double rigidness = 0)
+        /// <to be Ported>
+        public static NPolygon ConvexHull(NPolygon subject, double rigidness = 0)
         {
             if (subject.Count == 0)
-                return new Ngon();
+                return new NPolygon();
 
             if (rigidness >= 1)
                 return subject.Clone();
 
             subject = subject.Clone();
             if (Clipper.Area(subject) < 0)
-                Clipper.ReversePaths(new Ngons() { subject });
+                Clipper.ReversePaths(new NPolygonsList() { subject });
 
-            Ngon last_hull = new Ngon();
-            Ngon hull = subject;
+            NPolygon last_hull = new NPolygon();
+            NPolygon hull = subject;
 
             double subj_area = Clipper.Area(hull);
 
@@ -432,7 +450,7 @@ namespace PolyNester
             while (last_hull.Count != hull.Count)
             {
                 last_hull = hull;
-                hull = new Ngon();
+                hull = new NPolygon();
                 hull.Add(last_hull[last_vert]);
 
                 int steps_since_insert = 0;
@@ -473,42 +491,44 @@ namespace PolyNester
             return hull;
         }
 
-        public static Ngons MinkowskiSumSegment(Ngon pattern, IntPoint p1, IntPoint p2, bool flip_pattern)
+        /// <to be Ported>
+        public static NPolygonsList MinkowskiSumSegment(NPolygon pattern, IntPoint p1, IntPoint p2, bool flip_pattern)
         {
             Clipper clipper = new Clipper();
 
-            Ngon p1_c = pattern.Clone(p1.X, p1.Y, flip_pattern);
+            NPolygon p1_c = pattern.Clone(p1.X, p1.Y, flip_pattern);
 
             if (p1 == p2)
-                return new Ngons() { p1_c };
+                return new NPolygonsList() { p1_c };
 
-            Ngon p2_c = pattern.Clone(p2.X, p2.Y, flip_pattern);
+            NPolygon p2_c = pattern.Clone(p2.X, p2.Y, flip_pattern);
 
-            Ngons full = new Ngons();
+            NPolygonsList full = new NPolygonsList();
             clipper.AddPath(p1_c, PolyType.ptSubject, true);
             clipper.AddPath(p2_c, PolyType.ptSubject, true);
-            clipper.AddPaths(Clipper.MinkowskiSum(pattern.Clone(0, 0, flip_pattern), new Ngon() { p1, p2 }, false), PolyType.ptSubject, true);
+            clipper.AddPaths(Clipper.MinkowskiSum(pattern.Clone(0, 0, flip_pattern), new NPolygon() { p1, p2 }, false), PolyType.ptSubject, true);
             clipper.Execute(ClipType.ctUnion, full, PolyFillType.pftNonZero);
 
             return full;
         }
 
-        public static Ngons MinkowskiSumBoundary(Ngon pattern, Ngon path, bool flip_pattern)
+        /// <to be Ported>
+        public static NPolygonsList MinkowskiSumBoundary(NPolygon pattern, NPolygon path, bool flip_pattern)
         {
             Clipper clipper = new Clipper();
 
-            Ngons full = new Ngons();
+            NPolygonsList full = new NPolygonsList();
 
             for (int i = 0; i < path.Count; i++)
             {
                 IntPoint p1 = path[i];
                 IntPoint p2 = path[(i + 1) % path.Count];
 
-                Ngons seg = MinkowskiSumSegment(pattern, p1, p2, flip_pattern);
+                NPolygonsList seg = MinkowskiSumSegment(pattern, p1, p2, flip_pattern);
                 clipper.AddPaths(full, PolyType.ptSubject, true);
                 clipper.AddPaths(seg, PolyType.ptSubject, true);
 
-                Ngons res = new Ngons();
+                NPolygonsList res = new NPolygonsList();
                 clipper.Execute(ClipType.ctUnion, res, PolyFillType.pftNonZero);
                 full = res;
                 clipper.Clear();
@@ -517,19 +537,20 @@ namespace PolyNester
             return full;
         }
 
-        public static Ngons MinkowskiSumBoundary(Ngon pattern, Ngons path, bool flip_pattern)
+        /// <to be Ported>
+        public static NPolygonsList MinkowskiSumBoundary(NPolygon pattern, NPolygonsList path, bool flip_pattern)
         {
             Clipper clipper = new Clipper();
 
-            Ngons full = new Ngons();
+            NPolygonsList full = new NPolygonsList();
 
             for (int i = 0; i < path.Count; i++)
             {
-                Ngons seg = MinkowskiSumBoundary(pattern, path[i], flip_pattern);
+                NPolygonsList seg = MinkowskiSumBoundary(pattern, path[i], flip_pattern);
                 clipper.AddPaths(full, PolyType.ptSubject, true);
                 clipper.AddPaths(seg, PolyType.ptSubject, true);
 
-                Ngons res = new Ngons();
+                NPolygonsList res = new NPolygonsList();
                 clipper.Execute(ClipType.ctUnion, res, PolyFillType.pftNonZero);
                 full = res;
                 clipper.Clear();
@@ -538,7 +559,8 @@ namespace PolyNester
             return full;
         }
 
-        private static Ngons MSumSimple(Ngon pattern, Ngons subject, bool flip_pattern)
+        /// <to be Ported>
+        private static NPolygonsList MSumSimple(NPolygon pattern, NPolygonsList subject, bool flip_pattern)
         {
             IntRect pB = GetBounds(pattern);
             IntRect sB = GetBounds(subject[0]);
@@ -553,14 +575,15 @@ namespace PolyNester
             long t = pB.top + sB.top;
             long b = pB.bottom + sB.bottom;
 
-            Ngon p = new Ngon() { new IntPoint(l, b), new IntPoint(r, b), new IntPoint(r, t), new IntPoint(l, t) };
-            return new Ngons() { p };
+            NPolygon p = new NPolygon() { new IntPoint(l, b), new IntPoint(r, b), new IntPoint(r, t), new IntPoint(l, t) };
+            return new NPolygonsList() { p };
         }
 
-        private static Ngons MSumConvex(Ngon pattern, Ngons subject, bool flip_pattern)
+        /// <to be Ported>
+        private static NPolygonsList MSumConvex(NPolygon pattern, NPolygonsList subject, bool flip_pattern)
         {
-            Ngon h_p = ConvexHull(pattern.Clone(0, 0, flip_pattern));
-            Ngon h_s = ConvexHull(subject[0].Clone());
+            NPolygon h_p = ConvexHull(pattern.Clone(0, 0, flip_pattern));
+            NPolygon h_s = ConvexHull(subject[0].Clone());
 
             int n_p = h_p.Count;
             int n_s = h_s.Count;
@@ -575,7 +598,7 @@ namespace PolyNester
                 if (h_s[k].Y < h_s[ss].Y)
                     ss = k;
 
-            Ngon poly = new Ngon(n_p + n_s);
+            NPolygon poly = new NPolygon(n_p + n_s);
 
             int i = 0;
             int j = 0;
@@ -626,10 +649,11 @@ namespace PolyNester
             return Clipper.SimplifyPolygon(poly);
         }
 
-        private static Ngons MSumConcave(Ngon pattern, Ngons subject, bool flip_pattern, double rigidness = 1.0)
+        /// <to be Ported>
+        private static NPolygonsList MSumConcave(NPolygon pattern, NPolygonsList subject, bool flip_pattern, double rigidness = 1.0)
         {
-            Ngon subj = subject[0];
-            Ngon patt = pattern.Clone(0, 0, flip_pattern);
+            NPolygon subj = subject[0];
+            NPolygon patt = pattern.Clone(0, 0, flip_pattern);
 
             if (rigidness < 1.0)
             {
@@ -637,15 +661,16 @@ namespace PolyNester
                 patt = ConvexHull(patt, rigidness);
             }
 
-            Ngons sres = MinkowskiSumBoundary(patt, subj, false);
-            return sres.Count == 0 ? sres : new Ngons() { sres[0] };
+            NPolygonsList sres = MinkowskiSumBoundary(patt, subj, false);
+            return sres.Count == 0 ? sres : new NPolygonsList() { sres[0] };
         }
 
-        private static Ngons MSumFull(Ngon pattern, Ngons subject, bool flip_pattern)
+        /// <to be Ported>
+        private static NPolygonsList MSumFull(NPolygon pattern, NPolygonsList subject, bool flip_pattern)
         {
             Clipper clipper = new Clipper();
 
-            Ngons full = new Ngons();
+            NPolygonsList full = new NPolygonsList();
 
             long scale = flip_pattern ? -1 : 1;
 
@@ -658,14 +683,15 @@ namespace PolyNester
             clipper.AddPaths(full, PolyType.ptSubject, true);
             clipper.AddPaths(MinkowskiSumBoundary(pattern, subject, flip_pattern), PolyType.ptSubject, true);
 
-            Ngons res = new Ngons();
+            NPolygonsList res = new NPolygonsList();
 
             clipper.Execute(ClipType.ctUnion, res, PolyFillType.pftNonZero);
 
             return res;
         }
 
-        public static Ngons MinkowskiSum(Ngon pattern, Ngons subject, NFPQUALITY quality, bool flip_pattern)
+        /// <to be Ported>
+        public static NPolygonsList MinkowskiSum(NPolygon pattern, NPolygonsList subject, NFPQUALITY quality, bool flip_pattern)
         {
             switch (quality)
             {
@@ -688,7 +714,8 @@ namespace PolyNester
             }
         }
 
-        public static Ngon CanFitInsidePolygon(IntRect canvas, Ngon pattern)
+        /// <to be Ported>
+        public static NPolygon CanFitInsidePolygon(IntRect canvas, NPolygon pattern)
         {
             IntRect bds = GetBounds(pattern);
 
@@ -700,10 +727,11 @@ namespace PolyNester
             if (l > r || b > t)
                 return null;
 
-            return new Ngon() { new IntPoint(l, b), new IntPoint(r, b), new IntPoint(r, t), new IntPoint(l, t) };
+            return new NPolygon() { new IntPoint(l, b), new IntPoint(r, b), new IntPoint(r, t), new IntPoint(l, t) };
         }
 
-        public static double AlignToEdgeRotation(Ngon target, int edge_start)
+        /// <to be Ported>
+        public static double AlignToEdgeRotation(NPolygon target, int edge_start)
         {
             edge_start %= target.Count;
             int next_pt = (edge_start + 1) % target.Count;
@@ -711,7 +739,8 @@ namespace PolyNester
             return -Math.Atan2(best_edge.Y, best_edge.X);
         }
 
-        public static bool AlmostRectangle(Ngon target, double percent_diff = 0.05)
+        /// <to be Ported>
+        public static bool AlmostRectangle(NPolygon target, double percent_diff = 0.05)
         {
             IntRect bounds = GetBounds(target);
             double area = Math.Abs(Clipper.Area(target));
@@ -722,22 +751,25 @@ namespace PolyNester
 
     public class Nester
     {
+        /// <to be Ported>
         private class PolyRef
         {
-            public Ngons poly;
+            public NPolygonsList poly;
             public Mat3x3 trans;
 
+            /// <to be Ported>
             public IntPoint GetTransformedPoint(int poly_id, int index)
             {
                 return trans * poly[poly_id][index];
             }
 
-            public Ngons GetTransformedPoly()
+            /// <to be Ported>
+            public NPolygonsList GetTransformedPoly()
             {
-                Ngons n = new Ngons(poly.Count);
+                NPolygonsList n = new NPolygonsList(poly.Count);
                 for (int i = 0; i < poly.Count; i++)
                 {
-                    Ngon nn = new Ngon(poly[i].Count);
+                    NPolygon nn = new NPolygon(poly[i].Count);
                     for (int j = 0; j < poly[i].Count; j++)
                         nn.Add(GetTransformedPoint(i, j));
                     n.Add(nn);
@@ -746,6 +778,7 @@ namespace PolyNester
             }
         }
 
+        /// <to be Ported>
         private class Command
         {
             public Action<object[]> Call;
@@ -768,6 +801,7 @@ namespace PolyNester
             command_buffer = new Queue<Command>();
         }
 
+        /// <to be Ported>
         public void ExecuteCommandBuffer(Action<ProgressChangedEventArgs> callback_progress, Action<AsyncCompletedEventArgs> callback_completed)
         {
             background_worker = new BackgroundWorker();
@@ -793,6 +827,7 @@ namespace PolyNester
             background_worker.CancelAsync();
         }
 
+        /// <to be Ported>
         private void Background_worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             if (e.Cancelled || e.Error != null)
@@ -804,6 +839,7 @@ namespace PolyNester
             background_worker.Dispose();
         }
 
+        /// <to be Ported>
         private void Background_worker_DoWork(object sender, DoWorkEventArgs e)
         {
             while (command_buffer.Count > 0)
@@ -819,6 +855,7 @@ namespace PolyNester
             }
         }
 
+        /// <to be Ported>
         public void ClearCommandBuffer()
         {
             command_buffer.Clear();
@@ -829,6 +866,7 @@ namespace PolyNester
             return background_worker != null && background_worker.IsBusy;
         }
 
+        /// <to be Ported>
         private HashSet<int> PreprocessHandles(IEnumerable<int> handles)
         {
             if (handles == null)
@@ -846,6 +884,7 @@ namespace PolyNester
             command_buffer.Enqueue(new Command() { Call = cmd_scale, param = new object[] { handle, scale_x, scale_y } });
         }
 
+        /// <to be Ported>
         private void cmd_scale(params object[] param)
         {
             int handle = (int)param[0];
@@ -859,6 +898,7 @@ namespace PolyNester
             command_buffer.Enqueue(new Command() { Call = cmd_rotate, param = new object[] { handle, theta } });
         }
 
+        /// <to be Ported>
         private void cmd_rotate(params object[] param)
         {
             int handle = (int)param[0];
@@ -871,6 +911,7 @@ namespace PolyNester
             command_buffer.Enqueue(new Command() { Call = cmd_translate, param = new object[] { handle, translate_x, translate_y } });
         }
 
+        /// <to be Ported>
         private void cmd_translate(params object[] param)
         {
             int handle = (int)param[0];
@@ -884,6 +925,7 @@ namespace PolyNester
             command_buffer.Enqueue(new Command() { Call = cmd_translate_origin_to_zero, param = new object[] { handles } });
         }
 
+        /// <to be Ported>
         private void cmd_translate_origin_to_zero(params object[] param)
         {
             HashSet<int> unique = PreprocessHandles(param[0] as IEnumerable<int>);
@@ -895,11 +937,13 @@ namespace PolyNester
             }
         }
 
+        /// <to be Ported>
         public void CMD_Refit(Rect64 target, bool stretch, IEnumerable<int> handles)
         {
             command_buffer.Enqueue(new Command() { Call = cmd_refit, param = new object[] { target, stretch, handles } });
         }
 
+        /// <to be Ported>
         private void cmd_refit(params object[] param)
         {
             Rect64 target = (Rect64)param[0];
@@ -920,6 +964,7 @@ namespace PolyNester
             }
         }
 
+        /// <to be Ported>
         /// <summary>
         /// Get the optimal quality for tradeoff between speed and precision of NFP
         /// </summary>
@@ -928,8 +973,8 @@ namespace PolyNester
         /// <returns></returns>
         private NFPQUALITY GetNFPQuality(int subj_handle, int pattern_handle, double max_area_bounds)
         {
-            Ngon S = polygon_lib[subj_handle].GetTransformedPoly()[0];
-            Ngon P = polygon_lib[pattern_handle].GetTransformedPoly()[0];
+            NPolygon S = polygon_lib[subj_handle].GetTransformedPoly()[0];
+            NPolygon P = polygon_lib[pattern_handle].GetTransformedPoly()[0];
 
             if (GeomUtility.AlmostRectangle(S) && GeomUtility.AlmostRectangle(P))
                 return NFPQUALITY.Simple;
@@ -961,6 +1006,7 @@ namespace PolyNester
             return NFPQUALITY.Full;
         }
 
+        /// <to be Ported>
         /// <summary>
         /// Parallel kernel for generating NFP of pattern on handle, return the index in the library of this NFP
         /// Decides the optimal quality for this NFP
@@ -988,11 +1034,13 @@ namespace PolyNester
                 body(k);
         }
 
+        /// <to be Ported>
         public void CMD_Nest(IEnumerable<int> handles, NFPQUALITY max_quality = NFPQUALITY.Full)
         {
             command_buffer.Enqueue(new Command() { Call = cmd_nest, param = new object[] { handles, max_quality } });
         }
 
+        /// <to be Ported>
         /// <summary>
         /// Nest the collection of handles with minimal enclosing square from origin
         /// </summary>
@@ -1060,7 +1108,7 @@ namespace PolyNester
 
                     c.AddPaths(polygon_lib[nfps[i, j]].GetTransformedPoly(), PolyType.ptClip, true);
                 }
-                Ngons fit_region = new Ngons();
+                NPolygonsList fit_region = new NPolygonsList();
                 c.Execute(ClipType.ctDifference, fit_region, PolyFillType.pftNonZero);
 
 
@@ -1101,14 +1149,16 @@ namespace PolyNester
             polygon_lib.RemoveRange(start_cnt, polygon_lib.Count - start_cnt);
         }
 
+        /// <to be Ported>
         public void CMD_OptimalRotation(IEnumerable<int> handles)
         {
             command_buffer.Enqueue(new Command() { Call = cmd_optimal_rotation, param = new object[] { handles } });
         }
 
+        /// <to be Ported>
         private void cmd_optimal_rotation(int handle)
         {
-            Ngon hull = polygon_lib[handle].GetTransformedPoly()[0];
+            NPolygon hull = polygon_lib[handle].GetTransformedPoly()[0];
             int n = hull.Count;
 
             double best_t = 0;
@@ -1122,7 +1172,7 @@ namespace PolyNester
 
                 Mat3x3 rot = Mat3x3.RotateCounterClockwise(t);
 
-                Ngon clone = hull.Clone(rot);
+                NPolygon clone = hull.Clone(rot);
 
                 IntRect bounds = GeomUtility.GetBounds(clone);
                 long area = bounds.Area();
@@ -1145,6 +1195,7 @@ namespace PolyNester
             cmd_translate(handle, (double)around.X, (double)around.Y);
         }
 
+        /// <to be Ported>
         private void cmd_optimal_rotation(params object[] param)
         {
             HashSet<int> unique = PreprocessHandles(param[0] as IEnumerable<int>);
@@ -1153,6 +1204,7 @@ namespace PolyNester
                 cmd_optimal_rotation(i);
         }
 
+        /// <to be Ported>
         /// <summary>
         /// Append a set triangulated polygons to the nester and get handles for each point to the correp. polygon island
         /// </summary>
@@ -1169,6 +1221,7 @@ namespace PolyNester
             HashSet<int>[] graph = new HashSet<int>[points.Length];
             for (int i = 0; i < graph.Length; i++)
                 graph[i] = new HashSet<int>();
+
             for (int i = 0; i < tris.Length; i += 3)
             {
                 int t1 = tris[i];
@@ -1213,37 +1266,37 @@ namespace PolyNester
                 clust_cnt++;
             }
 
-            Ngons[] clusters = new Ngons[clust_cnt];
+            NPolygonsList[] clusters = new NPolygonsList[clust_cnt];
             for (int i = 0; i < tris.Length; i += 3)
             {
                 int clust = clust_ids[tris[i]];
                 if (clusters[clust] == null)
-                    clusters[clust] = new Ngons();
+                    clusters[clust] = new NPolygonsList();
 
                 IntPoint p1 = points[tris[i]];
                 IntPoint p2 = points[tris[i + 1]];
                 IntPoint p3 = points[tris[i + 2]];
 
-                clusters[clust].Add(new Ngon() { p1, p2, p3 });
+                clusters[clust].Add(new NPolygon() { p1, p2, p3 });
             }
 
-            List<Ngons> fulls = new List<Ngons>();
+            List<NPolygonsList> fulls = new List<NPolygonsList>();
 
             for (int i = 0; i < clust_cnt; i++)
             {
-                Ngons cl = clusters[i];
+                NPolygonsList cl = clusters[i];
 
                 Clipper c = new Clipper();
-                foreach (Ngon n in cl)
+                foreach (NPolygon n in cl)
                     c.AddPath(n, PolyType.ptSubject, true);
 
-                Ngons full = new Ngons();
+                NPolygonsList full = new NPolygonsList();
                 c.Execute(ClipType.ctUnion, full, PolyFillType.pftNonZero);
                 full = Clipper.SimplifyPolygons(full, PolyFillType.pftNonZero);
 
                 if (miter_distance > 0.00001)
                 {
-                    Ngons full_miter = new Ngons();
+                    NPolygonsList full_miter = new NPolygonsList();
                     ClipperOffset co = new ClipperOffset();
                     co.AddPaths(full, JoinType.jtMiter, EndType.etClosedPolygon);
                     co.Execute(ref full_miter, miter_distance);
@@ -1263,6 +1316,7 @@ namespace PolyNester
             return clust_ids;
         }
 
+        /// <to be Ported>
         /// <summary>
         /// Append a set of triangulated polygons to the nester and get handles for points to polygons, coordinates are assumed
         /// to be in UV [0,1] space
@@ -1276,19 +1330,18 @@ namespace PolyNester
             for (int i = 0; i < points.Length; i++)
                 new_pts[i] = new IntPoint(points[i].X * unit_scale, points[i].Y * unit_scale);
 
-            int start_index = polygon_lib.Count;
-
             int[] map = AddPolygons(new_pts, tris, miter_distance * unit_scale);
 
             return map;
         }
 
+        /// <to be Ported>
         public int AddMinkowskiSum(int subj_handle, int pattern_handle, NFPQUALITY quality, bool flip_pattern, int set_at = -1)
         {
-            Ngons A = polygon_lib[subj_handle].GetTransformedPoly();
-            Ngons B = polygon_lib[pattern_handle].GetTransformedPoly();
+            NPolygonsList A = polygon_lib[subj_handle].GetTransformedPoly();
+            NPolygonsList B = polygon_lib[pattern_handle].GetTransformedPoly();
 
-            Ngons C = GeomUtility.MinkowskiSum(B[0], A, quality, flip_pattern);
+            NPolygonsList C = GeomUtility.MinkowskiSum(B[0], A, quality, flip_pattern);
             PolyRef pref = new PolyRef() { poly = C, trans = Mat3x3.Eye() };
 
             if (set_at < 0)
@@ -1299,12 +1352,13 @@ namespace PolyNester
             return set_at < 0 ? polygon_lib.Count - 1 : set_at;
         }
 
+        /// <to be Ported>
         public int AddCanvasFitPolygon(IntRect canvas, int pattern_handle)
         {
-            Ngon B = polygon_lib[pattern_handle].GetTransformedPoly()[0];
+            NPolygon B = polygon_lib[pattern_handle].GetTransformedPoly()[0];
 
-            Ngon C = GeomUtility.CanFitInsidePolygon(canvas, B);
-            polygon_lib.Add(new PolyRef() { poly = new Ngons() { C }, trans = Mat3x3.Eye() });
+            NPolygon C = GeomUtility.CanFitInsidePolygon(canvas, B);
+            polygon_lib.Add(new PolyRef() { poly = new NPolygonsList() { C }, trans = Mat3x3.Eye() });
             return polygon_lib.Count - 1;
         }
 
@@ -1314,6 +1368,7 @@ namespace PolyNester
             return AddCanvasFitPolygon(c, pattern_handle);
         }
 
+        /// <to be Ported>
         public int[] AddCanvasFitPolygon(IEnumerable<int> handles)
         {
             HashSet<int> unique = PreprocessHandles(handles);
@@ -1336,11 +1391,13 @@ namespace PolyNester
             return handles.Select(p => AddCanvasFitPolygon(canvas, p)).ToArray();
         }
 
-        public Ngons GetTransformedPoly(int handle)
+        /// <to be Ported>
+        public NPolygonsList GetTransformedPoly(int handle)
         {
             return polygon_lib[handle].GetTransformedPoly();
         }
 
+        /// <to be Ported>
         public void ResetTransformLib()
         {
             for (int i = 0; i < polygon_lib.Count; i++)
